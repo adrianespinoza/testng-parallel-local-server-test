@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suite name="ITinvolve testing Changes" verbose="1" >
+  <test name="Changes" preserve-order="false">
+    <classes>
+      <class name="com.itinvolve.itsm.changes.Test1"/>
+    </classes>
+  </test>
+</suite>

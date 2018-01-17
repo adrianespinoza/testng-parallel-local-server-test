@@ -1,0 +1,177 @@
+import org.gradle.logging.StyledTextOutput;
+import org.gradle.logging.StyledTextOutputFactory;
+import static org.gradle.logging.StyledTextOutput.Style;
+
+apply plugin: "java"
+apply plugin: "eclipse"
+apply plugin: "maven"
+
+// more defaults
+defaultTasks "deploy"
+
+def sfDeployDirectory = "gradle/sf/deploy/src"
+def sfUndeployDirectory = "gradle/sf/remove"
+def props
+
+repositories {
+    mavenCentral()
+}
+
+configurations {
+  salesforceAnt {description = "Salesforce Ant tasks"}
+}
+
+// define main dependencies to authenticate from the repos
+dependencies {
+    salesforceAnt files(System.getProperty("user.dir") + "/lib/migration/ant-salesforce.jar")
+}
+
+def executeDeploy(def props, sfDeployDir) {
+    if (props != null) {
+        ant{
+            sf = deploy ( username: props.get("username"),
+                        password: props.get("passwordtoken"),
+                        serverurl: props.get("serverurl"),
+                        maxPoll: props.get("maxPoll"),
+                        deployRoot: sfDeployDir)
+        }
+    } else {
+        project(":gradle:util").printMessage("userInput", "-> DEPLOY ACTION DO NOT EXECUTED.")
+    }
+}
+
+def credentialXmlReader(String path, String credentialId, String userId) {
+    def username
+    def password
+    def token
+    def sfdctype
+    def passwordtoken
+
+    def parsedProjectXml = (new XmlParser()).parse(path)
+    String credIdRead
+
+    parsedProjectXml.credential.each { credential ->
+        credIdRead = credential.@id
+        if(credIdRead.equals(credentialId)) {
+            project(":gradle:util").printMessage("userInput", "-> Salesforce credential found")
+            sfdctype = credential.@'sfdc-type'
+            if (userId.isEmpty() || userId.toLowerCase().equals("admin")) {// take admin user by default
+                username = credential.admin[0].@name
+                password = credential.admin[0].@password
+                token = credential.admin[0].@token
+            } else { // some user
+                String id
+                credential.each { user ->
+                    id = user.@id
+                    if (userIdtoLowerCase().equals(id.toLowerCase())) {
+                        username = user.@name
+                        password = user.@password
+                        token = user.@token
+                    }
+                }
+            }
+        }
+    }
+    passwordtoken = password + token
+    return [username: username, password: password, token: token, passwordtoken: passwordtoken, sfdctype: sfdctype]
+}
+
+def loadSfCredential(String cred) {
+    def properties
+    if (!(cred.equals(""))) {
+        Properties mainConfigProps = project(":gradle:util").readProperty("./config/config.properties")
+        def path = mainConfigProps.getProperty("path.salesforce.credentials")
+        def maxPoll = mainConfigProps.getProperty("sf.maxPoll")
+        String sfServerUrl = mainConfigProps.getProperty("sf.url")
+
+        properties = credentialXmlReader(path, cred, "admin")
+
+        def sfdctype = properties.get("sfdctype")
+        sfServerUrl = sfServerUrl.replace("[sfdc-type]", sfdctype)
+
+        properties.put("serverurl", sfServerUrl)
+        properties.put("maxPoll", maxPoll)
+    } else {
+        project(":gradle:util").printMessage("info", "-> YOU HAVE TO TYPE THE CREDENTIAL ID CONFIGURED IN Credendials.xml FILE\n-> e.g. command format > gradle [<task>] -Dcred=[<id>]")
+    }
+    return properties
+}
+
+task prepare << {
+    ext.systemProperties = [
+            credential: System.getProperty("credential", "")
+    ]
+    def cred = systemProperties.get("credential")
+    props = loadSfCredential(cred)
+
+    if (props != null) {
+        ext.sfJarPath = configurations.salesforceAnt.getAsPath()
+        ext.sfTasks = [ "deploy": "DeployTask",
+                        "retrieve": "RetrieveTask",
+                        "listMetadata": "ListMetadataTask",
+                        "describeMetadata": "DescribeMetadataTask" ];
+        sfTasks.each { name, clazz -> ant.taskdef (name:name, classname:"com.salesforce.ant.${clazz}", classpath: sfJarPath) }
+    }
+}
+
+// salesforce tasks
+task deploy(dependsOn: prepare) << {
+    executeDeploy(props, sfDeployDirectory)
+}
+
+task undeploy (dependsOn: prepare) << {
+    if (props != null) {
+        ant{
+            sf = deploy ( username: props.get("username"),
+                        password: props.get("passwordtoken"),
+                        serverurl: props.get("serverurl"),
+                        maxPoll: props.get("maxPoll"),
+                        deployRoot: sfUndeployDirectory)
+        }
+    } else {
+        project(":gradle:util").printMessage("userInput", "-> UNDEPLOY ACTION DO NOT EXECUTED.")
+    }
+}
+
+task retrieve(dependsOn: prepare) << {
+    if (props != null) {
+        delete "retrieveOutput"
+        ext.retrieveDir = file("retrieveOutput")
+        ext.retrieveDir.mkdirs()
+        ant {
+            sf = retrieve ( username: props.get("username"),
+                          password: props.get("passwordtoken"),
+                          serverurl: props.get("serverurl"),
+                          retrieveTarget: "retrieveOutput",
+                          packageNames: "MyPkg")
+        }
+        project(":gradle:util").printMessage("userInput", "RETRIEVED IN retrieveOutput FOLDER.")
+    } else {
+        project(":gradle:util").printMessage("userInput", "-> RETRIEVE ACTION DO NOT EXECUTED.")
+    }
+}
+
+task retrieveUnpackaged (dependsOn: prepare) << {
+    if (props != null) {
+        ext.retrieveDir = file("retrieveUnpackaged")
+        ext.retrieveDir.mkdirs()
+        ant{
+            sf = retrieve ( username: props.get("username"),
+                        password: props.get("passwordtoken"),
+                        serverurl: props.get("serverurl"),
+                        maxPoll: props.get("maxPoll"),
+                        retrieveTarget: "retrieveUnpackaged",
+                        unpackaged: "unpackaged/package.xml")
+        }
+    } else {
+        project(":gradle:util").printMessage("userInput", "-> RETRIEVE UNPACKAGED ACTION DO NOT EXECUTED.")
+    }
+}
+
+task updateAndDeploy(dependsOn: [project(":gradle:hg").update, prepare]) << {
+    executeDeploy(props, sfDeployDirectory)
+}
+
+task sf << {
+    project(":gradle:util").printMessage("info", "-> Hi from Gradle Salesforce project.")
+}

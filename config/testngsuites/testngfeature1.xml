@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suite name="ITinvolve testing2" verbose="1" >
+  <test name="Verify basic sention exist">
+    <classes>
+      <!--<class name="com.itinvolve.itsm.change.testcases.WorkingWithInternalFrame"/>-->
+      <class name="com.itinvolve.itsm.change.testcases.VerifyBasicSectionExist"/>
+      <class name="com.itinvolve.itsm.change.testcases.VerifyNewStatus"/>
+    </classes>
+  </test>
+</suite>

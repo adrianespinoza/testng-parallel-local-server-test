@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
+
+<log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/">
+
+    <appender name="StdOut" class="org.apache.log4j.ConsoleAppender">
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%d %-5p (%x) [%t] %c{1} - %m%n" />
+        </layout>
+    </appender>
+
+    <appender name="FileAppender" class="org.apache.log4j.DailyRollingFileAppender">
+        <param name="Append" value="true"/>
+        <param name="datePattern" value="'.'yyyy-MM-dd"/>
+        <param name="File" value="mine.log"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%d %-5p (%x) [%t] %c{1} - %m%n" />
+        </layout>
+    </appender>
+
+    <appender name="AppenderWrapper" class="com.itinvolve.itsm.framework.logs.LoggingAppender">
+        <appender-ref ref="StdOut"/>
+        <appender-ref ref="FileAppender"/>
+    </appender>
+
+    <root>
+        <priority value="debug"/>
+        <appender-ref ref="AppenderWrapper"/>
+    </root>
+
+</log4j:configuration>

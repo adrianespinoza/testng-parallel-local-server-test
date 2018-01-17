@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suite name="ITinvolve testing a" verbose="1" >
+  <test name="taking screenshot for a element">
+    <classes>
+      <class name="com.itinvolve.itsm.change.testcases.TakeScreenshotWebElement"/>
+    </classes>
+  </test>
+</suite>

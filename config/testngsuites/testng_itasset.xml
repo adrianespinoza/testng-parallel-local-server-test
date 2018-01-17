@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suite name="ITinvolve testing" verbose="1" >
+  <test name="Verify ITAsset Objects creation" preserve-order="true">
+    <classes>
+
+      <class name="com.itinvolve.itsm.testcases.common.SetupMainApplicationEnvironment">
+        <methods>
+          <include name="loginMainApplication" />
+        </methods>
+      </class>
+<!--
+    <class name="com.itinvolve.itsm.testcases.cubicle.VerifyCreateCubicleObject"/>
+      <class name="com.itinvolve.itsm.testcases.rack.VerifyCreateRackObject"/>
+      <class name="com.itinvolve.itsm.testcases.networkedendpoint.VerifyCreateNetworkedEndpointObject" />
+      <class name="com.itinvolve.itsm.testcases.permission.VerifyCreatePermissionObject"/>
+      <class name="com.itinvolve.itsm.testcases.chassis.VerifyCreateChassisObject"/>
+      <class name="com.itinvolve.itsm.testcases.powerdevice.VerifyCreatePowerDeviceObject"/>
+      <class name="com.itinvolve.itsm.testcases.domain.VerifyCreateDomainObject"/>
+      <class name="com.itinvolve.itsm.testcases.printer.VerifyCreatePrinterObject"/>
+      <class name="com.itinvolve.itsm.testcases.room.VerifyCreateRoomObject"/>
+      <class name="com.itinvolve.itsm.testcases.storagedevice.VerifyCreateStorageDeviceObject"/>
+      <class name="com.itinvolve.itsm.testcases.coolingdevice.VerifyCreateCoolingDeviceObject"/> -->
+      <class name="com.itinvolve.itsm.testcases.databaseinstance.VerifyCreateDatabaseInstanceObject"/>
+<!--
+      <class name="com.itinvolve.itsm.testcases.applicationsoftware.VerifyCreateApplicationSoftwareObject"/>
+      <class name="com.itinvolve.itsm.testcases.automation.VerifyCreateAutomationObject"/>
+      <class name="com.itinvolve.itsm.testcases.computer.VerifyCreateComputerWithSplitOptions" />
+      <class name="com.itinvolve.itsm.testcases.application.VerifyCreateApplicationObject"/>
+      <class name="com.itinvolve.itsm.testcases.building.VerifyCreateBuildingObject"/>
+      <class name="com.itinvolve.itsm.testcases.knowledge.VerifyCreateKnowledgeObject"/>
+      <class name="com.itinvolve.itsm.testcases.applicationserver.VerifyCreateApplicationServerObject"/>
+      <class name="com.itinvolve.itsm.testcases.businessservice.VerifyCreateBusinessServiceObject"/>
+      <class name="com.itinvolve.itsm.testcases.policy.VerifyCreatePolicyObject"/>
+      <class name="com.itinvolve.itsm.testcases.itgroup.VerifyCreateITGroupObject"/>
+      <class name="com.itinvolve.itsm.testcases.site.VerifyCreateSiteObject"/>
+      <class name="com.itinvolve.itsm.testcases.communicationdevice.VerifyCreateCommunicationDeviceObject"/>
+      <class name="com.itinvolve.itsm.testcases.component.VerifyCreateComponentObject"/>
+      <class name="com.itinvolve.itsm.testcases.computer.VerifyCreateComputerObject"/>
+      <class name="com.itinvolve.itsm.testcases.database.VerifyCreateDatabaseObject"/>
+      <class name="com.itinvolve.itsm.testcases.datacenter.VerifyCreateDatacenterObject"/>
+      <class name="com.itinvolve.itsm.testcases.department.VerifyCreateDepartmentObject"/>
+      <class name="com.itinvolve.itsm.testcases.fileshare.VerifyCreateFileShareObject"/>
+      <class name="com.itinvolve.itsm.testcases.item.VerifyCreateItemObject"/>
+      <class name="com.itinvolve.itsm.testcases.floor.VerifyCreateFloorObject"/>
+      <class name="com.itinvolve.itsm.testcases.itcontact.VerifyCreateITContactObject"/>
+      <class name="com.itinvolve.itsm.testcases.network.VerifyCreateNetworkObject"/>
+      <class name="com.itinvolve.itsm.testcases.networkdevice.VerifyCreateNetworkDeviceObject"/>
+      <class name="com.itinvolve.itsm.testcases.networkport.VerifyCreateNetworkPortObject"/>
+-->
+    </classes>
+  </test>
+</suite>

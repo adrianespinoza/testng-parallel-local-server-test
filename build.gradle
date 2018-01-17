@@ -1,0 +1,397 @@
+apply plugin: 'java'
+apply plugin: 'idea'
+apply plugin: 'eclipse'
+
+import java.text.DateFormat
+import java.text.SimpleDateFormat
+
+defaultTasks "run"
+version = "0.1-AUTOMATION"
+
+repositories {
+    mavenCentral()
+    //flatDir name: 'localRepository', dirs: 'lib'
+}
+
+configurations {
+    mail
+    src
+}
+
+dependencies {
+    testCompile "org.testng:testng:6.8.7"
+
+    testCompile("org.uncommons:reportng:1.1.4") {
+        exclude group: "org.testng"
+    }
+
+    compile("log4j:log4j:1.2.17") {
+        exclude(group: "com.sun.jdmk", module: "jmxtools")
+        exclude(group: "com.sun.jmx", module: "jmxri")
+        exclude(group: "javax.jms", module: "jms")
+        exclude(group: "javax.mail", module: "mail")
+    }
+
+    compile "org.seleniumhq.selenium:selenium-java:2.39.0"
+    compile group: "axis", name: "axis", version: "1.4"
+    compile group: "junit", name: "junit", version: "4.8.2"
+    compile group: "com.google.inject", name: "guice", version: "3.0"
+
+    mail "org.apache.ant:ant-javamail:1.9.2"
+    compile "com.opera:operadriver:1.5"
+    compile "org.jsoup:jsoup:1.7.3"
+
+    //compile group: "log4j", name: "log4j", version: "1.2.17"
+
+    compile fileTree(dir: "./lib/wsc", includes: ["*.jar"])
+    //compile files('./lib/wsc/wsc-23.jar', './lib/wsc/partner.jar')
+}
+
+sourceSets {
+    test {
+        java {
+            srcDir "src/com/itinvolve/itsm"
+        }
+    }
+    main {
+        java {
+            srcDir "src/com/itinvolve/main"
+        }
+    }
+}
+
+eclipse {
+    classpath {
+        sourceSets {
+            test {
+                java {
+                    srcDir "src/com/itinvolve/itsm"
+                }
+            }
+            main {
+                java {
+                    srcDir "src/com/itinvolve/main"
+                }
+            }
+        }
+    }
+}
+
+String[] items;
+String[] browsers = [ "firefox","chrome","ie","safari","opera"]
+Properties mainConfigProps = PropertiesReader.read("./config/config.properties")
+def sign = "[Copyright (c) ITinvolve, Inc. All Rights Reserved]"
+
+String directBrowser = ""
+
+boolean isValidBrowser(String typeBorwser, String[] browsers) {
+    boolean isValid = false
+    browsers.each{ String brow ->
+        if (typeBorwser.equals(brow)) {
+            isValid = true
+        }
+    }
+    return isValid
+}
+
+def getReportDirectoryName() {
+    DateFormat df = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss")
+    String sdt = df.format(new Date(System.currentTimeMillis()))
+    return sdt
+}
+
+def clearDirectory(def dirPath, int numDirAllowed) {
+    File file = new File(dirPath);
+    String[] directories = file.list(new FilenameFilter() {
+        @Override
+        public boolean accept(File dir, String name) {
+            return new File(dir, name).isDirectory();
+        }
+    });
+
+    if (directories != null && (directories.length > numDirAllowed)) {
+        List<String> directoryNames = Arrays.asList(directories);
+        Collections.reverse(directoryNames);
+
+        String fullPath
+        for (int i = numDirAllowed; i < directoryNames.size(); i++) {
+            fullPath = dirPath + "\\" + directoryNames.get(i)
+            delete fullPath
+        }
+    }
+}
+
+def getInetAddress() {
+    InetAddress IP
+    try {
+        IP = InetAddress.getLocalHost()
+        return IP.getHostName().toString()
+    } catch (UnknownHostException e) {
+        println "-> ERROR TO TRYING GET IP ADDRESS " + e.getMessage()
+        return null
+    }
+}
+
+boolean isValidMailProperties(def mailProps) {
+    String data = mailProps.getProperty("mail.host")
+    if (data != null && !data.isEmpty()) {
+        data = mailProps.getProperty("mail.port")
+        if (data != null && !data.isEmpty()) {
+            data = mailProps.getProperty("mail.from.address")
+            if (data != null && !data.isEmpty()) {
+                data = mailProps.getProperty("mail.to.address")
+                if (data != null && !data.isEmpty()) {
+                    return true;
+                } else {
+                    println "-> Missing configure the to address in mail file"
+                }
+            } else {
+                println "-> Missing configure the from address in mail file"
+            }
+        } else {
+            println "-> Missing configure the mail port in mail file"
+        }
+    } else {
+        println "-> Missing configure the mail host in mail file"
+    }
+    return false;
+}
+
+tasks.withType(Test) {
+    ignoreFailures = true// take careful
+
+    String suitePath = mainConfigProps.getProperty("path.suite.path")
+    String suiteFilePath = mainConfigProps.getProperty("path.suite.file")
+
+    Properties suiteProps = PropertiesReader.read(suiteFilePath)
+
+    String tempSuites = suiteProps.getProperty("testng.suites")
+    tempSuites = tempSuites.replaceAll(" ", "");
+    items = tempSuites.split(",")
+    int counter = 0
+
+    items.each{String item ->
+        items[counter++] = suitePath + item
+    }
+
+    systemProperties = [
+        browser: System.getProperty("browser", ""),
+        credential: System.getProperty("credential", ""),
+        parallel: System.getProperty("parallel", "false")
+    ]
+
+    // Makes the standard streams (err and out) visible at console when running tests
+    testLogging.showStandardStreams = Boolean.valueOf(mainConfigProps.getProperty("gradle.standard.streams"))
+}
+
+task run (type: Test) {
+    directBrowser = System.getProperty("driver")
+
+    String browser = systemProperties.get("browser")
+    if (directBrowser != null && !directBrowser.equals("")) {
+        browser = directBrowser
+        systemProperties.put("browser", browser)
+    }
+
+    String credential = systemProperties.get("credential")
+    String testResultTitle = "Test Results Report"
+    String consoleMessage = "-> TEST EXECUTION ABORTED"
+    boolean runTests = true
+
+    if (!browser.equals("")) {
+        if (isValidBrowser(browser, browsers)) {
+            testResultTitle = testResultTitle + " In " + browser + " Browser"
+        } else {
+            runTests = false
+            consoleMessage = "THE " + browser + " BROWSER IS NOT SUPORTED"
+        }
+    }
+
+    Properties mailProps = PropertiesReader.read(mainConfigProps.getProperty("path.mail.file"))
+    boolean sendMail = Boolean.valueOf(mailProps.getProperty("mail.send"))
+    println "-> MAIL FILE WAS CONFIGURED TO " + (sendMail ? "SEND MAILS" : "DO NOT SEND EMAILS.")
+    if (sendMail && !isValidMailProperties(mailProps)) {
+        runTests = false;
+    }
+
+    if (runTests) {
+        boolean showTestStatus = Boolean.valueOf(mainConfigProps.getProperty("gradle.test.status"))
+        if (showTestStatus) {
+            testLogging {
+                events "started", "passed", "skipped", "failed", "standardOut", "standardError"
+                exceptionFormat "full" // default is "short"
+            }
+        }
+
+        String reportingLocalBaseDir = "${reporting.baseDir}/" + browser
+        String reportsJunitXmlTestResults = "${buildDir}/test-results/" + browser
+        String reportDirectoryName = getReportDirectoryName()
+
+        systemProperties.put("reportdirname", reportDirectoryName)
+        int numberDirAllowed = Integer.valueOf(mainConfigProps.getProperty("test.report.maxDir"))
+
+        clearDirectory(reportingLocalBaseDir, (numberDirAllowed - 1))
+        clearDirectory(reportsJunitXmlTestResults, (numberDirAllowed - 1))
+
+        scanForTestClasses = false
+        useTestNG()
+        options {
+            //report generation delegated to TestNG library:
+            useDefaultListeners = false
+
+            listeners << "com.itinvolve.itsm.framework.listeners.TestCaseSuiteListener"
+            listeners << "com.itinvolve.itsm.framework.listeners.TestCaseInvokedMethodListener"
+            listeners << "com.itinvolve.itsm.framework.listeners.TestCaseTestListener"
+
+            listeners << "org.testng.reporters.FailedReporter"
+            listeners << "org.testng.reporters.XMLReporter"
+
+            listeners << "org.uncommons.reportng.HTMLReporter"
+            listeners << "org.uncommons.reportng.JUnitXMLReporter"
+
+            //creates emailable HTML file this reporter typically ships with TestNG library
+            listeners << "org.testng.reporters.EmailableReporter"
+
+            suites(items)
+        }
+        reports.junitXml.destination = reportsJunitXmlTestResults + "/" + reportDirectoryName
+        reports.html.destination = reportingLocalBaseDir + "/" + reportDirectoryName
+
+        systemProperties.put("org.uncommons.reportng.title", testResultTitle)
+        systemProperties.put("org.uncommons.reportng.escape-output","false")
+
+        //turn off Gradle"s HTML report to avoid replacing the reports generated by TestNG library:
+        reports.html.enabled = false
+
+        doLast {
+            //String user = mailProps.getProperty("mail.user.name")
+            String remoteDirectory = mainConfigProps.getProperty("test.remote.dir")
+            boolean useRemoteDirectory = Boolean.valueOf(mainConfigProps.getProperty("test.use.remote"))
+            String hostName = getInetAddress()
+
+            String reportingRemoteBaseDir = remoteDirectory + "reports/" + hostName + "/" + browser
+            reportingRemoteBaseDir = reportingRemoteBaseDir.replaceAll(" ", "")
+
+            // clean local files
+            delete "${reporting.baseDir}/logs", reportingLocalBaseDir + "/" + reportDirectoryName + "/html/logs/catchAllTC.log"
+            if(useRemoteDirectory) {
+                //clean remote files
+                clearDirectory(reportingRemoteBaseDir, (numberDirAllowed - 1))
+                copy {
+                    from reportingLocalBaseDir + "/" + reportDirectoryName
+                    into reportingRemoteBaseDir + "/" + reportDirectoryName
+                }
+                println "-> USING REMOTE DIRECTORY!"
+            }
+
+            if (sendMail) {
+                println "-> SENDING MAIL..."
+
+                String htmlZipReportDir = "${buildDir}/tmp"
+                String htmlZipReportFile = "html.zip"
+                String summaryToSend = reportingLocalBaseDir + "/" + reportDirectoryName + "/emailable-report.html"
+                File summaryTestFile = file(summaryToSend)
+
+                String localReportIndex = reportingLocalBaseDir + "/" + reportDirectoryName + "/html/index.html"
+                String remoteReportIndex = "file:" + reportingRemoteBaseDir +  "/" + reportDirectoryName + "/html/index.html"
+                String urlToSend = "<a href='" + localReportIndex + "' >" + testResultTitle + "</a>"
+
+                if(useRemoteDirectory) {
+                    urlToSend = "<a href=" + remoteReportIndex + " >" + testResultTitle + "</a>"
+                }
+
+                configurations.mail.each {
+                   org.apache.tools.ant.Project.class.classLoader.addURL(it.toURI().toURL())
+                }
+
+                if (summaryTestFile.exists()) {
+                    ant.zip(destfile: htmlZipReportDir + "/" + htmlZipReportFile) {
+                        fileset(dir: reportingLocalBaseDir + "/" + reportDirectoryName + "/html") {
+                            //include(name: '**.xml')
+                            //exclude(name: '**.java')
+                        }
+                    }
+                }
+
+                def mailParameters = [
+                    tolist:mailProps.getProperty("mail.to.address"),
+                    mailhost:mailProps.getProperty("mail.host"),
+                    mailport:mailProps.getProperty("mail.port"),
+                    subject:testResultTitle
+                ]
+
+                String reply = mailProps.getProperty("mail.replyto.address")
+                ant.mail (mailParameters) {
+                    from (address:mailProps.getProperty("mail.from.address"))
+                    if (reply != null && !reply.isEmpty()) {
+                        replyto (address:mailProps.getProperty("mail.replyto.address"))
+                    }
+                    if (summaryTestFile.exists()) {
+                        //message (src:summaryToSend, mimetype:"text/html")
+                        message (urlToSend, mimetype:"text/html")
+                        attachments {
+                            fileset(dir: htmlZipReportDir, includes: "*.zip")
+                        }
+                    } else {
+                        message ("EMAILABLE REPORT FILE NOT FOUND, THE TEST HAS FAILED")
+                    }
+                }
+            }
+        }
+    } else {
+        println consoleMessage
+    }
+}
+
+task testNGTestsWrapper(type: GradleBuild){
+    tasks = ['run']
+}
+
+task chrome {
+    doFirst {
+        System.setProperty('driver', 'chrome')
+        testNGTestsWrapper.execute()
+    }
+}
+task firefox {
+    doFirst {
+        System.setProperty('driver', 'firefox')
+        testNGTestsWrapper.execute()
+    }
+}
+task ie {
+    doFirst {
+        System.setProperty('driver', 'ie')
+        testNGTestsWrapper.execute()
+    }
+}
+
+task generateJavadoc(type: Javadoc) {
+    def javadocDir = "./docs/javadoc"
+    delete javadocDir
+    source = ["src/com/itinvolve/itsm/framework"]
+    title = "Automation Framework Javadocs"
+    //options.memberLevel = org.gradle.external.javadoc.JavadocMemberLevel.PRIVATE
+    //options.memberLevel = org.gradle.external.javadoc.JavadocMemberLevel.PROTECTED
+    options.memberLevel = org.gradle.external.javadoc.JavadocMemberLevel.PUBLIC
+    options.footer = "Generate on ${new Date().format('dd MMM yyyy')} " + sign
+    options.header = "Documentation for Automation Framework vertion ${project.version}"
+    classpath = configurations.compile
+    destinationDir = file(javadocDir)
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '1.8'
+}
+
+task echoEclipseSourceSets() << {
+    eclipse.classpath.sourceSets.each { println it }
+}
+
+class PropertiesReader {
+    public static Properties read(String filePath) {
+        Properties props = new Properties()
+        props.load(new FileInputStream(filePath))
+        return props
+    }
+}

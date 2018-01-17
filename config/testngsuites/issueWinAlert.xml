@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suite name="ITinvolve testing win alert" verbose="1" >
+  <test name="Issue Window Alert">
+    <classes>
+      <class name="com.itinvolve.itsm.change.testcases.IssueWinAlert"/>
+    </classes>
+  </test>
+</suite>

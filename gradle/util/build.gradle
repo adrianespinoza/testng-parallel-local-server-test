@@ -1,0 +1,42 @@
+import org.gradle.logging.StyledTextOutput;
+import org.gradle.logging.StyledTextOutputFactory;
+import static org.gradle.logging.StyledTextOutput.Style;
+apply plugin: 'java'
+
+//type: error, description, userInput, info
+def printMessage(String type, String message) {
+    StyledTextOutput out = services.get(StyledTextOutputFactory).create("blah")
+    Style style
+    if (type.equals("error")) {
+        System.setProperty('org.gradle.color.error', 'RED')
+        style = Style.Error
+    } else if (type.equals("description")) {
+        style = Style.Description
+    } else if (type.equals("userInput")) {
+        style = Style.UserInput
+    } else if (type.equals("info")) {
+        style = Style.Info
+    } else {
+        style = Style.UserInput
+        message = "-> Style type not defined [" + type + "] for message\n" + message
+    }
+    out.withStyle(style).println(message)
+}
+
+def executeCMD(String cmdLine, String workingDirectory) {
+    def result = exec {
+        ignoreExitValue = true
+        commandLine cmdLine.split()
+        workingDir workingDirectory
+    }
+    if (result.exitValue != 0) {
+        println ""
+        printMessage("userInput", "-> Command error")
+    }
+}
+
+def readProperty(def filePath) {
+    Properties props = new Properties()
+    props.load(new FileInputStream(filePath))
+    return props
+}

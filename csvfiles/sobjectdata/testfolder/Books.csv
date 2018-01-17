@@ -1,0 +1,4 @@
+Author__c,Library__c,Title__c,IsImported__c,Pages__c,FirstDateTime__c,FirstDate__c
+Smith1,,EA,TRUE,300,2013-10-15 16:16:38,2013-10-15,,,,,,,,,
+Smith2,,EA,TRUE,300,2013-10-15 16:16:38,2013-10-15,,,,,,,,,
+Smith3,,EA,TRUE,300,2013-10-15 16:16:38,2013-10-15,,,,,,,,,

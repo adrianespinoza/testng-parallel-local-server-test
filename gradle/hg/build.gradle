@@ -1,0 +1,80 @@
+apply plugin: 'java'
+
+def username
+def password
+
+String remoteRepository
+String localRepository = System.getProperty("user.dir") + "/gradle/sf/deploy"
+
+def executeCMD(String cmdLine, String remoteRepo, String localRepo) {
+    if ((remoteRepo != null) && !remoteRepo.isEmpty()) {
+        project(":gradle:util").executeCMD(cmdLine, localRepo)
+    }
+}
+
+task ask << {
+    Properties mainConfigProps = project(":gradle:util").readProperty("./config/config.properties")
+    remoteRepository = mainConfigProps.getProperty("hg.remote.repo")
+    boolean useAuthentication = Boolean.valueOf(mainConfigProps.getProperty("hg.use.auth"))
+    if ((remoteRepository != null) && !remoteRepository.isEmpty()) {
+        String realremoteRepository = remoteRepository
+        if (useAuthentication) {
+            username = mainConfigProps.getProperty("hg.username")
+            password = mainConfigProps.getProperty("hg.password")
+
+            if (((username != null) && !username.isEmpty()) && ((password != null) && !password.isEmpty())) {
+                project(":gradle:util").printMessage("userInput", "-> HG CREDENTIALS READ FROM CONFIG FILE.")
+            } else {
+                def console = System.console()
+                project(":gradle:util").printMessage("userInput", "-> HTTP AUTHORIZATION REQUIRED")
+                if (console) {
+                    username = console.readLine('> Please enter your username: ')
+                    password = console.readPassword('> Please enter your password: ')
+                } else {
+                    logger.error "-> Cannot get console."
+                }
+            }
+
+            String key = username + ":" + password + "@"
+            String[] items = remoteRepository.split("//")
+            int pos = 1
+            int size = items.length
+            items.each{ String item ->
+                if (pos < size) {
+                    realremoteRepository += item + "//" + key;
+                } else {
+                    realremoteRepository += item
+                }
+                pos++
+            }
+        }
+        remoteRepository = realremoteRepository
+    } else {
+        project(":gradle:util").printMessage("error", "-> REMOTE REPOSITORY NOT DEFINED IN config.properties FILE [REPOSITORY: " + remoteRepository + "]")
+    }
+}
+
+task clone(dependsOn: ask) << {
+    String cmdLine = 'hg clone "' + remoteRepository + '" "' + localRepository + '"'
+    project(":gradle:util").printMessage("userInput", "-> Cloning from " + remoteRepository + " to " + localRepository)
+    executeCMD(cmdLine, remoteRepository, localRepository);
+}
+
+task incoming(dependsOn: ask) << {
+    String cmdLine = 'hg incoming "' + remoteRepository + '"'
+    executeCMD(cmdLine, remoteRepository, localRepository);
+}
+
+task pull(dependsOn: ask) << {
+    String cmdLine = 'hg pull "' + remoteRepository + '"'
+    executeCMD(cmdLine, remoteRepository, localRepository);
+}
+
+task update(dependsOn: pull) << {
+    String cmdLine = 'hg update'
+    executeCMD(cmdLine, remoteRepository, localRepository);
+}
+
+task hg << {
+    project(":gradle:util").printMessage("info", "-> Hi from Gradle Mercurial project.")
+}
